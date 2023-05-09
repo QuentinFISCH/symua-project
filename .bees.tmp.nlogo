@@ -2,17 +2,33 @@ globals [
   nest-x ; x-coordinate of the center of the nest
   nest-y ; y-coordinate of the center of the nest
   pollen ; amount of pollen in the hive
+  p_piste_danse
+  p_mort
+  p_succes
+  p_echec
+  p_scout
+  p_sortie_impossible
+  t_min
+  t_max
+  pollen-decrease-rate
+  s_impact
+  max_pollen
+  flower_min_pollen
+  flower_max_pollen
 ]
 
 turtles-own [
   speed ; the speed at which the bee is moving
-  carrying-pollen? ; whether or not the bee is carrying pollen
+  pollen-carried ; amount of pollen carried
   distance-to-target ; the distance between the bee and its target
   target-flower
+  next-task
+  wait-time
 ]
 
 patches-own [
   flower?
+  flower-pollen
 ]
 
 to setup
@@ -23,20 +39,38 @@ to setup
   set nest-y 0
   set pollen 0
 
+  set p_piste_danse .8
+  set p_succes .5
+  set p_echec 1 - p_succes
+  set p_scout .3
+  set p_mort 0
+  set p_sortie_impossible 0.1
+
+  set t_min 1000
+  set t_max 10000
+  set pollen-decrease-rate 0.01
+
+  set max_pollen 1000
+  set flower_min_pollen 1
+  set flower_max_pollen 10
+
   create-turtles num-bees [
     setxy nest-x nest-y
     set heading random 360
     set size 1.5
     set speed 2
     set color yellow
-    set carrying-pollen? false
+    set pollen-carried 0
+    set next-task [ -> repos ]
   ]
   ask patches [
     set pcolor brown
     set flower? false
+    set flower-pollen 0
     if random-float 1 < flower-density [
       set pcolor green
       set flower? true
+      set flower-pollen flower_min_pollen + random(flower_max_pollen - flower_min_pollen)
     ]
   ]
   ask patches with [(sqrt ((pxcor - nest-x) * (pxcor - nest-x) + (pycor - nest-y) * (pycor - nest-y))) <= 2] [
@@ -48,41 +82,155 @@ end
 
 to go
   ask turtles [
-    if target-flower = 0 [
-      set target-flower one-of patches with [pcolor = green]
-    ]
-
-    ifelse carrying-pollen? [
-      ifelse in-nest self [ ; bee is dropping the pollen in the nest and going back to the flower
-        set pollen pollen + 1
-        set carrying-pollen? false
-        set speed (speed * 2)
-
-        ; select random flower and go towards it
-        set target-flower one-of patches with [pcolor = green]
-        set distance-to-target (distance target-flower)
-        set heading (towards target-flower)
-      ][ ; bee has pollen and heading towards the nest
-        set distance-to-target (distancexy nest-x nest-y)
-        set heading (towardsxy nest-x nest-y)
-        print heading
-      ]
-    ] [
-      ifelse (distance target-flower) < 1 [ ; bee is on the flower, get pollen and go back to nest
-        set carrying-pollen? true
-        set heading (towardsxy nest-x nest-y)
-        set speed (speed * 0.5)
-        set distance-to-target (distancexy nest-x nest-y)
-      ] [  ; bee is heading towards a flower without pollen
-        set distance-to-target (distance target-flower)
-        set heading (towards target-flower)
-      ]
-    ]
-
-    fd speed
+    run next-task
   ]
 
+  decrease-nest-pollen
   tick
+end
+
+to repos
+  let random-proba random-float 1
+  let random-proba-sortie random-float 1
+
+  set target-flower 0 ; reset target flower
+  print random-proba-sortie
+  if (random-proba-sortie < p_sortie_impossible or random-proba < 1 - p_piste_danse) [
+    set next-task [ -> repos ]
+    stop
+  ]
+  if (random-proba < p_piste_danse)[
+    set next-task [ -> sur-la-piste-de-danse ]
+  ]
+end
+
+to sur-la-piste-de-danse
+  let random-proba-sortie random-float 1
+  let random-proba-scout random-float 1
+
+  if (random-proba-sortie < p_sortie_impossible) [
+    set next-task [ -> repos ]
+    stop
+  ]
+  let profitabilite 0
+  if target-flower != 0 [
+    set profitabilite ([flower-pollen] of target-flower / flower_max_pollen)
+  ]
+  if (random-proba-scout < 1 - p_scout) [ ; todo: and profitabilité < s
+    set next-task [ -> en-recherche-de-danse ]
+    stop
+  ]
+  if (random-proba-scout < p_scout or profitabilite < s_impact) [
+    set next-task [ -> butinage ]
+    stop
+  ]
+  ; todo: if profitabilité > s_impact then danse
+  if (profitabilite >= s_impact) [
+    set next-task [ -> danse ]
+  ]
+end
+
+to en-recherche-de-danse
+  let random-proba-sortie random-float 1
+  let random-proba-scout random-float 1
+
+  set target-flower 0 ; reset target flower
+
+  if (random-proba-sortie < p_sortie_impossible) [
+    set wait-time 0
+    set next-task [ -> repos ]
+    stop
+  ]
+
+  if (wait-time = 0) [
+    set wait-time (one-of (range t_min t_max))
+  ]
+  if (wait-time = 1) [
+    set wait-time (wait-time - 1) ; wait-time = 0
+    if (random-proba-scout < p_scout) [
+      set next-task [ -> butinage ]
+    ]
+    stop
+  ]
+
+  ; search for other bees dancing
+  let recrute false
+  let dancing_bee one-of (other turtles with [next-task = [ -> danse ]])
+  if (dancing_bee != nobody) [
+    set recrute true
+  ]
+
+  ifelse (not recrute) [
+    set wait-time (wait-time - 1)
+    set next-task [ -> en-recherche-de-danse ]
+  ] [
+    set target-flower ([target-flower] of dancing_bee)
+    set wait-time 0
+    set next-task [ -> butinage ]
+  ]
+end
+
+to butinage
+  if (target-flower = 0) [
+    set target-flower one-of patches with [flower? = true]
+  ]
+  set distance-to-target (distance target-flower)
+
+  ifelse (distance target-flower) < 1 [ ; bee is on the flower, get pollen and go back to nest
+    let random-succes random-float 1
+    ifelse random-succes < p_succes [
+      set speed (speed * 0.5) ; todo: define factor as global variable
+      set next-task [ -> succes ]
+    ] [
+      set next-task [ -> echec ]
+    ]
+  ] [  ; bee is heading towards a flower without pollen
+    fd speed
+    set next-task [ -> butinage ]
+  ]
+end
+
+to succes
+  set pollen-carried ([flower-pollen] of target-flower)
+  go-back-to-nest
+end
+
+to echec
+  set pollen-carried 0
+  go-back-to-nest
+end
+
+to danse
+  let random-proba-sortie random-float 1
+
+  if (random-proba-sortie < p_sortie_impossible) [
+    set next-task [ -> repos ]
+    stop
+  ]
+  set next-task [ -> butinage ]
+end
+
+to go-back-to-nest
+  set heading (towardsxy nest-x nest-y)
+  set distance-to-target (distancexy nest-x nest-y)
+
+  if in-nest self [
+    set pollen (pollen + pollen-carried)
+    set pollen-carried 0
+    set speed 2
+    if pollen > max_pollen [
+      set max_pollen pollen
+    ]
+    set next-task [ -> sur-la-piste-de-danse ]
+    stop
+  ]
+
+  fd speed
+end
+
+to decrease-nest-pollen
+  set pollen round (pollen - pollen * pollen-decrease-rate)
+  set s_impact (pollen / max_pollen)
 end
 
 to-report in-nest [bee]
@@ -90,13 +238,13 @@ to-report in-nest [bee]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
-10
-647
-448
+191
+11
+835
+656
 -1
 -1
-13.0
+9.785
 1
 10
 1
@@ -106,10 +254,10 @@ GRAPHICS-WINDOW
 1
 1
 1
--16
-16
--16
-16
+-32
+32
+-32
+32
 0
 0
 1
@@ -159,7 +307,7 @@ num-bees
 num-bees
 1
 100
-4.0
+100.0
 1
 1
 NIL
@@ -179,6 +327,24 @@ flower-density
 1
 NIL
 HORIZONTAL
+
+PLOT
+1035
+10
+1618
+395
+Pollen
+ticks
+pollen
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot pollen"
 
 @#$#@#$#@
 ## WHAT IS IT?
