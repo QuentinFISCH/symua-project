@@ -40,7 +40,7 @@ to setup
   set pollen 0
 
   set p_piste_danse .8
-  set p_succes .5
+  set p_succes .8
   set p_echec 1 - p_succes
   set p_scout .3
   set p_mort 0
@@ -48,7 +48,7 @@ to setup
 
   set t_min 1000
   set t_max 10000
-  set pollen-decrease-rate 0.01
+  set pollen-decrease-rate 0.015
 
   set max_pollen 1000
   set flower_min_pollen 1
@@ -59,22 +59,23 @@ to setup
     set heading random 360
     set size 1.5
     set speed 2
-    set color yellow
+    set color gray
     set pollen-carried 0
     set next-task [ -> repos ]
   ]
   ask patches [
-    set pcolor brown
+    set pcolor green
     set flower? false
     set flower-pollen 0
     if random-float 1 < flower-density [
-      set pcolor green
       set flower? true
       set flower-pollen flower_min_pollen + random(flower_max_pollen - flower_min_pollen)
+      let t (flower-pollen / (flower_max_pollen - flower_min_pollen)) * 255
+      set pcolor rgb 255 t t
     ]
   ]
   ask patches with [(sqrt ((pxcor - nest-x) * (pxcor - nest-x) + (pycor - nest-y) * (pycor - nest-y))) <= 2] [
-    set pcolor white
+    set pcolor
   ]
   reset-ticks
 end
@@ -93,8 +94,9 @@ to repos
   let random-proba random-float 1
   let random-proba-sortie random-float 1
 
+  set color gray
+
   set target-flower 0 ; reset target flower
-  print random-proba-sortie
   if (random-proba-sortie < p_sortie_impossible or random-proba < 1 - p_piste_danse) [
     set next-task [ -> repos ]
     stop
@@ -107,6 +109,8 @@ end
 to sur-la-piste-de-danse
   let random-proba-sortie random-float 1
   let random-proba-scout random-float 1
+
+  set color pink
 
   if (random-proba-sortie < p_sortie_impossible) [
     set next-task [ -> repos ]
@@ -133,6 +137,8 @@ end
 to en-recherche-de-danse
   let random-proba-sortie random-float 1
   let random-proba-scout random-float 1
+
+  set color blue
 
   set target-flower 0 ; reset target flower
 
@@ -171,11 +177,12 @@ to en-recherche-de-danse
 end
 
 to butinage
+  set color yellow
+
   if (target-flower = 0) [
     set target-flower one-of patches with [flower? = true]
   ]
   set distance-to-target (distance target-flower)
-
   ifelse (distance target-flower) < 1 [ ; bee is on the flower, get pollen and go back to nest
     let random-succes random-float 1
     ifelse random-succes < p_succes [
@@ -185,23 +192,30 @@ to butinage
       set next-task [ -> echec ]
     ]
   ] [  ; bee is heading towards a flower without pollen
+    set heading (towards target-flower)
     fd speed
     set next-task [ -> butinage ]
   ]
 end
 
 to succes
+  set color green
+
   set pollen-carried ([flower-pollen] of target-flower)
   go-back-to-nest
 end
 
 to echec
+  set color red
+
   set pollen-carried 0
   go-back-to-nest
 end
 
 to danse
   let random-proba-sortie random-float 1
+
+  set color orange
 
   if (random-proba-sortie < p_sortie_impossible) [
     set next-task [ -> repos ]
@@ -238,13 +252,13 @@ to-report in-nest [bee]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-191
-11
-835
-656
+187
+10
+782
+606
 -1
 -1
-9.785
+9.031
 1
 10
 1
@@ -329,10 +343,10 @@ NIL
 HORIZONTAL
 
 PLOT
-1035
-10
-1618
-395
+789
+14
+1192
+290
 Pollen
 ticks
 pollen
@@ -345,6 +359,97 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot pollen"
+
+PLOT
+1198
+572
+1596
+834
+Yellow bees (en cours de butinage)
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles with [color = yellow]"
+
+PLOT
+1195
+15
+1595
+293
+Pink bees (sur la piste de danse)
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles with [color = pink]"
+
+PLOT
+787
+293
+1195
+570
+Blue bees (en recherche de danse)
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles with [color = blue]"
+
+PLOT
+1198
+294
+1595
+570
+Gray bees (au repos)
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles with [color = gray]"
+
+PLOT
+787
+573
+1196
+835
+Green vs red bees (succès vs echec lors du butinage)
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"echec" 1.0 0 -2674135 true "" "plot count turtles with [color = red]"
+"succes" 1.0 0 -13840069 true "" "plot count turtles with [color = green]"
 
 @#$#@#$#@
 ## WHAT IS IT?
