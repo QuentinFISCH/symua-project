@@ -6,10 +6,12 @@ globals [
   t_min
   t_max
   pollen-decrease-rate
-  s_impact
   max_pollen
   flower_min_pollen
   flower_max_pollen
+  INITIAL_SPEED
+  POLLEN_SPEED
+  hives-coords
 ]
 
 turtles-own [
@@ -20,19 +22,24 @@ turtles-own [
   next-task
   wait-time
   hive
+  hive-position
 ]
 
 patches-own [
   flower?
   flower-pollen
+  hive?
+  hive-pollen
+  hive-s-impact
 ]
 
 to setup
   clear-all
 
-  set nest-x 0
-  set nest-y 0
-  set pollen 0
+  set hives-coords []
+
+  set INITiAL_SPEED 2
+  set POLLEN_SPEED 1
 
   set p_echec 1 - p_succes
 
@@ -40,27 +47,57 @@ to setup
   set t_max 10000
   set pollen-decrease-rate 0.015
 
-  setup-bees
   setup-flowers
+  setup-hives
+  setup-bees
 
   reset-ticks
 end
 
 
+to setup-hives
+  set color-list [ 97.9 94.5 57.5 63.8 17.6 14.9 27.5 25.1 117.9 114.4 ]
+
+  ask patches [
+    set hive? false
+  ]
+
+  let i 0
+  ask n-of num-hives patches with [
+    distancexy 0 0 > 5 and abs pxcor < (max-pxcor - 2) and
+    abs pycor < (max-pycor - 2)
+  ] [
+    let center-pxcor pxcor
+    let center-pycor pycor
+    set hive? true
+    ask patches with [(sqrt ((pxcor - center-pxcor) * (pxcor - center-pxcor) + (pycor - center-pycor) * (pycor - center-pycor))) <= 2] [
+      set pcolor yellow
+      set hive-pollen 0
+      set flower? false
+      set flower-pollen 0
+      set hive-s-impact 1
+    ]
+
+    sprout num-bees-per-hive [
+      set hive patch-here
+      fd random-float 3
+      set hive-position patch-here
+      set heading random 360
+      set size 1.5
+      set speed INITIAL_SPEED
+      set color gray
+      set pollen-carried 0
+      set next-task [ -> repos ]
+    ]
+
+    set-current-plot "pollen"
+    create-temporary-plot-pen word "pollen" i
+    set i i + 1
+  ]
+end
+
 to setup-bees
   set-default-shape turtles "bee 2"
-
-  create-turtles num-bees [
-    setxy nest-x nest-y ; change
-    set hive patch-here
-    ;fd random-float 3
-    set heading random 360
-    set size 1.5
-    set speed 2
-    set color gray
-    set pollen-carried 0
-    set next-task [ -> repos ]
-  ]
 end
 
 
@@ -80,9 +117,6 @@ to setup-flowers
       set pcolor rgb 255 t t
     ]
   ]
-  ask patches with [(sqrt ((pxcor - nest-x) * (pxcor - nest-x) + (pycor - nest-y) * (pycor - nest-y))) <= 2] [
-    set pcolor yellow
-  ]
 end
 
 
@@ -92,6 +126,7 @@ to go
   ]
 
   decrease-nest-pollen
+  plot-pollen
   tick
 end
 
@@ -129,12 +164,12 @@ to sur-la-piste-de-danse
     set next-task [ -> en-recherche-de-danse ]
     stop
   ]
-  if (random-proba-scout < p_scout or profitabilite < s_impact) [
+  if (random-proba-scout < p_scout or profitabilite < [hive-s-impact] of hive) [
     set next-task [ -> butinage ]
     stop
   ]
   ; todo: if profitabilité > s_impact then danse
-  if (profitabilite >= s_impact) [
+  if (profitabilite >= [hive-s-impact] of hive) [
     set next-task [ -> danse ]
   ]
 end
@@ -191,14 +226,14 @@ to butinage
   ifelse (distance target-flower) < 1 [ ; bee is on the flower, get pollen and go back to nest
     let random-succes random-float 1
     ifelse random-succes < p_succes [
-      set speed (speed * 0.5) ; todo: define factor as global variable
+      set speed POLLEN_SPEED
       set next-task [ -> succes ]
     ] [
       set next-task [ -> echec ]
     ]
   ] [  ; bee is heading towards a flower without pollen
     set heading (towards target-flower)
-    fd speed
+    proceed 60
     set next-task [ -> butinage ]
   ]
 end
@@ -230,19 +265,24 @@ to danse
 end
 
 to proceed [angle]
-  ;rt (random angle - random angle)
+  rt (random angle - random angle)
   fd speed
 end
 
 
 to go-back-to-nest
-  set heading (towardsxy nest-x nest-y)
-  set distance-to-target (distancexy nest-x nest-y)
+  face hive-position
+  set distance-to-target (distance hive-position)
 
-  if in-nest self [
-    set pollen (pollen + pollen-carried)
+  if distance hive-position < 1 [
+    let hivex ([pxcor] of hive)
+    let hivey ([pycor] of hive)
+    let pollen-to-add pollen-carried
+    ask patches with [pxcor = hivex and pycor = hivey] [
+      set hive-pollen (hive-pollen + pollen-to-add)
+    ]
     set pollen-carried 0
-    set speed (speed * 2)
+    set speed INITIAL_SPEED
     if pollen > max_pollen [
       set max_pollen pollen
     ]
@@ -250,16 +290,26 @@ to go-back-to-nest
     stop
   ]
 
-  fd speed
+  proceed 30
 end
+
 
 to decrease-nest-pollen
-  set pollen round (pollen - pollen * pollen-decrease-rate)
-  set s_impact (pollen / max_pollen)
+  ask patches with [hive? = true] [
+    set hive-pollen round (hive-pollen - hive-pollen * pollen-decrease-rate)
+    set hive-s-impact (hive-pollen / max_pollen)
+  ]
 end
 
-to-report in-nest [bee]
-  report [distancexy nest-x nest-y] of bee <=
+
+to plot-pollen
+  let i 0
+  ask patches with [hive? = true] [
+    set-current-plot "pollen"
+    set-current-plot-pen word "pollen" i
+    plot hive-pollen
+    set i i + 1
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -326,13 +376,13 @@ NIL
 SLIDER
 13
 181
-185
-214
-num-bees
-num-bees
+198
+215
+num-bees-per-hive
+num-bees-per-hive
 1
-100
-100.0
+1000
+54.0
 1
 1
 NIL
@@ -358,9 +408,9 @@ PLOT
 29
 1982
 305
-Pollen
-ticks
 pollen
+NIL
+NIL
 0.0
 10.0
 0.0
@@ -369,7 +419,6 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot pollen"
 
 PLOT
 1989
@@ -486,7 +535,7 @@ p_succes
 p_succes
 0
 1
-0.9
+0.8
 .05
 1
 NIL
@@ -533,6 +582,21 @@ p_sortie_impossible
 1
 0.1
 .05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+13
+278
+186
+312
+num-hives
+num-hives
+1
+10
+2.0
+1
 1
 NIL
 HORIZONTAL
