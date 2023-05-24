@@ -2,12 +2,7 @@ globals [
   nest-x ; x-coordinate of the center of the nest
   nest-y ; y-coordinate of the center of the nest
   pollen ; amount of pollen in the hive
-  p_piste_danse
-  p_mort
-  p_succes
   p_echec
-  p_scout
-  p_sortie_impossible
   t_min
   t_max
   pollen-decrease-rate
@@ -24,6 +19,7 @@ turtles-own [
   target-flower
   next-task
   wait-time
+  hive
 ]
 
 patches-own [
@@ -33,29 +29,31 @@ patches-own [
 
 to setup
   clear-all
-  set-default-shape turtles "butterfly"
 
   set nest-x 0
   set nest-y 0
   set pollen 0
 
-  set p_piste_danse .8
-  set p_succes .8
   set p_echec 1 - p_succes
-  set p_scout .3
-  set p_mort 0
-  set p_sortie_impossible 0.1
 
   set t_min 1000
   set t_max 10000
   set pollen-decrease-rate 0.015
 
-  set max_pollen 1000
-  set flower_min_pollen 1
-  set flower_max_pollen 10
+  setup-bees
+  setup-flowers
+
+  reset-ticks
+end
+
+
+to setup-bees
+  set-default-shape turtles "bee 2"
 
   create-turtles num-bees [
-    setxy nest-x nest-y
+    setxy nest-x nest-y ; change
+    set hive patch-here
+    ;fd random-float 3
     set heading random 360
     set size 1.5
     set speed 2
@@ -63,6 +61,14 @@ to setup
     set pollen-carried 0
     set next-task [ -> repos ]
   ]
+end
+
+
+to setup-flowers
+  set max_pollen 1000
+  set flower_min_pollen 1
+  set flower_max_pollen 10
+
   ask patches [
     set pcolor green
     set flower? false
@@ -77,7 +83,6 @@ to setup
   ask patches with [(sqrt ((pxcor - nest-x) * (pxcor - nest-x) + (pycor - nest-y) * (pycor - nest-y))) <= 2] [
     set pcolor yellow
   ]
-  reset-ticks
 end
 
 
@@ -224,6 +229,12 @@ to danse
   set next-task [ -> butinage ]
 end
 
+to proceed [angle]
+  ;rt (random angle - random angle)
+  fd speed
+end
+
+
 to go-back-to-nest
   set heading (towardsxy nest-x nest-y)
   set distance-to-target (distancexy nest-x nest-y)
@@ -231,7 +242,7 @@ to go-back-to-nest
   if in-nest self [
     set pollen (pollen + pollen-carried)
     set pollen-carried 0
-    set speed 2
+    set speed (speed * 2)
     if pollen > max_pollen [
       set max_pollen pollen
     ]
@@ -254,11 +265,11 @@ end
 GRAPHICS-WINDOW
 187
 10
-782
-606
+1380
+913
 -1
 -1
-9.031
+14.554
 1
 10
 1
@@ -270,8 +281,8 @@ GRAPHICS-WINDOW
 1
 -32
 32
--32
-32
+-24
+24
 0
 0
 1
@@ -343,10 +354,10 @@ NIL
 HORIZONTAL
 
 PLOT
-789
-14
-1192
-290
+1579
+29
+1982
+305
 Pollen
 ticks
 pollen
@@ -361,10 +372,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot pollen"
 
 PLOT
-1198
-572
-1596
-834
+1989
+590
+2387
+852
 Yellow bees (en cours de butinage)
 NIL
 NIL
@@ -379,10 +390,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = yellow]"
 
 PLOT
-1195
-15
-1595
-293
+1984
+29
+2384
+307
 Pink bees (sur la piste de danse)
 NIL
 NIL
@@ -397,10 +408,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = pink]"
 
 PLOT
-787
-293
-1195
-570
+1578
+312
+1986
+589
 Blue bees (en recherche de danse)
 NIL
 NIL
@@ -415,10 +426,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = blue]"
 
 PLOT
-1198
-294
-1595
-570
+1989
+313
+2386
+589
 Gray bees (au repos)
 NIL
 NIL
@@ -433,10 +444,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = gray]"
 
 PLOT
-787
-573
-1196
-835
+1578
+592
+1987
+854
 Green vs red bees (succès vs echec lors du butinage)
 NIL
 NIL
@@ -450,6 +461,81 @@ false
 PENS
 "echec" 1.0 0 -2674135 true "" "plot count turtles with [color = red]"
 "succes" 1.0 0 -13840069 true "" "plot count turtles with [color = green]"
+
+SLIDER
+4
+620
+179
+653
+p_piste_danse
+p_piste_danse
+0
+1
+0.8
+.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+6
+660
+178
+693
+p_succes
+p_succes
+0
+1
+0.9
+.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+6
+698
+178
+731
+p_mort
+p_mort
+0
+1
+0.0
+.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+0
+742
+172
+775
+p_scout
+p_scout
+0
+1
+0.3
+.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+3
+783
+178
+816
+p_sortie_impossible
+p_sortie_impossible
+0
+1
+0.1
+.05
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -502,6 +588,27 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+bee 2
+true
+0
+Polygon -1184463 true false 195 150 105 150 90 165 90 225 105 270 135 300 165 300 195 270 210 225 210 165 195 150
+Rectangle -16777216 true false 90 165 212 185
+Polygon -16777216 true false 90 207 90 226 210 226 210 207
+Polygon -16777216 true false 103 266 198 266 203 246 96 246
+Polygon -6459832 true false 120 150 105 135 105 75 120 60 180 60 195 75 195 135 180 150
+Polygon -6459832 true false 150 15 120 30 120 60 180 60 180 30
+Circle -16777216 true false 105 30 30
+Circle -16777216 true false 165 30 30
+Polygon -7500403 true true 120 90 75 105 15 90 30 75 120 75
+Polygon -16777216 false false 120 75 30 75 15 90 75 105 120 90
+Polygon -7500403 true true 180 75 180 90 225 105 285 90 270 75
+Polygon -16777216 false false 180 75 270 75 285 90 225 105 180 90
+Polygon -7500403 true true 180 75 180 90 195 105 240 195 270 210 285 210 285 150 255 105
+Polygon -16777216 false false 180 75 255 105 285 150 285 210 270 210 240 195 195 105 180 90
+Polygon -7500403 true true 120 75 45 105 15 150 15 210 30 210 60 195 105 105 120 90
+Polygon -16777216 false false 120 75 45 105 15 150 15 210 30 210 60 195 105 105 120 90
+Polygon -16777216 true false 135 300 165 300 180 285 120 285
 
 box
 false
