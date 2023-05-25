@@ -226,13 +226,17 @@ to butinage
 
   let random-proba-mort random-float 1
   if (random-proba-mort < p_mort) [
-    print "die"
     die
     stop
   ]
 
   if (target-flower = 0) [
     set target-flower one-of patches in-radius scout-radius with [flower? = true]
+    if (target-flower = Nobody) [
+      set next-task [-> echec]
+      set target-flower 0
+      stop
+    ]
   ]
   set distance-to-target (distance target-flower)
   ifelse (distance target-flower) < 1 [ ; bee is on the flower, get pollen and go back to nest
@@ -367,8 +371,8 @@ end
 GRAPHICS-WINDOW
 187
 10
-1380
-913
+1141
+732
 -1
 -1
 14.554
@@ -426,9 +430,9 @@ NIL
 1
 
 SLIDER
-13
-181
-198
+0
+182
+185
 215
 num-bees-per-hive
 num-bees-per-hive
@@ -642,12 +646,12 @@ SLIDER
 13
 278
 186
-312
+311
 num-hives
 num-hives
 1
 10
-6.0
+10.0
 1
 1
 NIL
@@ -657,12 +661,12 @@ SLIDER
 14
 324
 187
-358
+357
 scout-radius
 scout-radius
 3
 40
-14.0
+3.0
 1
 1
 NIL
