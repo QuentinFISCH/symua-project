@@ -379,6 +379,14 @@ to-report plot-pollen-hive [index]
   ]
   report pollen
 end
+
+to-report plot-total-pollen
+  let pollen 0
+  ask patches with [hive? = true] [
+    set pollen (pollen + hive-pollen)
+  ]
+  report pollen
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 187
@@ -678,11 +686,29 @@ scout-radius
 scout-radius
 3
 40
-3.0
+12.0
 1
 1
 NIL
 HORIZONTAL
+
+PLOT
+1173
+25
+1578
+289
+Pollen Total
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot plot-total-pollen"
 
 @#$#@#$#@
 ## WHAT IS IT?
