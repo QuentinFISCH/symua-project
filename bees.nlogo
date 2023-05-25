@@ -367,6 +367,18 @@ to plot-pollen
     set i i + 1
   ]
 end
+
+to-report plot-pollen-hive [index]
+  let i 0
+  let pollen 0
+  ask patches with [hive? = true] [
+    if (i = index) [
+      set pollen hive-pollen
+    ]
+    set i i + 1
+  ]
+  report pollen
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 187
