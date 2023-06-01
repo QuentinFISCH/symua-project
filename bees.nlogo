@@ -8,6 +8,11 @@ globals [
   INITIAL_SPEED
   POLLEN_SPEED
   birth-timer
+  p_piste_danse
+  p_succes
+  p_mort
+  p_scout
+  p_sortie_impossible
 ]
 
 turtles-own [
@@ -36,7 +41,11 @@ to setup
   clear-all
 
   set birth-timer 50
-
+  set p_piste_danse 0.2
+  set p_succes 0.8
+  set p_mort 0.0108
+  set p_scout 0.3
+  set p_sortie_impossible 0.2
   set INITiAL_SPEED 2
   set POLLEN_SPEED 1
 
@@ -141,13 +150,17 @@ to repos
   set color gray
 
   set target-flower 0 ; reset target flower
-  if (random-proba-sortie < p_sortie_impossible or random-proba < 1 - p_piste_danse) [
+  if (random-proba-sortie < p_sortie_impossible) [
     set next-task [ -> repos ]
     stop
   ]
-  if (random-proba < p_piste_danse)[
+
+  ifelse (random-proba < p_piste_danse)[
     set next-task [ -> sur-la-piste-de-danse ]
+  ] [
+    set next-task [ -> repos ]
   ]
+
 end
 
 
@@ -352,6 +365,7 @@ end
 to increase-flower-pollen
   ask patches with [flower? = true] [
     set flower-pollen (flower-pollen + flower-pollen-increase-rate)
+    set flower-pollen min list flower-pollen flower-initial-pollen
     let t 255 - (flower-pollen / (flower_max_pollen - flower_min_pollen)) * 255
     set pcolor rgb 255 t t
   ]
@@ -387,11 +401,19 @@ to-report plot-total-pollen
   ]
   report pollen
 end
+
+to-report get-flower-pollen
+  let total-flower-pollen 0
+  ask patches with [ flower? = true ] [
+    set total-flower-pollen (total-flower-pollen + flower-pollen)
+  ]
+  report total-flower-pollen
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-187
+188
 10
-1141
+1142
 732
 -1
 -1
@@ -433,10 +455,10 @@ NIL
 1
 
 BUTTON
-67
-27
-140
-60
+61
+50
+134
+83
 setup
 setup
 NIL
@@ -458,22 +480,22 @@ num-bees-per-hive
 num-bees-per-hive
 1
 100
-40.0
+47.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-12
+7
 230
-184
+179
 263
 flower-density
 flower-density
 0
 1
-0.1
+0.08
 .01
 1
 NIL
@@ -588,115 +610,40 @@ PENS
 "succes" 1.0 0 -13840069 true "" "plot count turtles with [color = green]"
 
 SLIDER
-4
-620
-179
-653
-p_piste_danse
-p_piste_danse
-0
-1
-0.8
-.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-6
-660
-178
-693
-p_succes
-p_succes
-0
-1
-0.8
-.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-6
-698
-178
-731
-p_mort
-p_mort
-0
-1
-0.01
-.01
-1
-NIL
-HORIZONTAL
-
-SLIDER
-0
-742
-172
-775
-p_scout
-p_scout
-0
-1
-0.3
-.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-3
-783
-178
-816
-p_sortie_impossible
-p_sortie_impossible
-0
-1
-0.1
-.05
-1
-NIL
-HORIZONTAL
-
-SLIDER
-13
-278
-186
-311
+8
+279
+181
+312
 num-hives
 num-hives
 1
 10
-10.0
+5.0
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-14
-324
-187
-357
+9
+325
+182
+358
 scout-radius
 scout-radius
 3
 40
-12.0
+18.0
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-1173
-25
+1175
+29
 1578
-289
+305
 Pollen Total
 NIL
 NIL
@@ -709,6 +656,24 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot plot-total-pollen"
+
+PLOT
+1176
+311
+1575
+590
+Total flower pollen
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot get-flower-pollen"
 
 @#$#@#$#@
 ## WHAT IS IT?
