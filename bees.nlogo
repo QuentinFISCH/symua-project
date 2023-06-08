@@ -413,11 +413,11 @@ end
 GRAPHICS-WINDOW
 188
 10
-1142
-732
+938
+579
 -1
 -1
-14.554
+11.43
 1
 10
 1
@@ -495,17 +495,17 @@ flower-density
 flower-density
 0
 1
-0.08
+0.83
 .01
 1
 NIL
 HORIZONTAL
 
 PLOT
-1579
-29
-1982
-305
+1346
+10
+1749
+286
 pollen
 NIL
 NIL
@@ -519,10 +519,10 @@ false
 PENS
 
 PLOT
-1989
-590
-2387
-852
+1756
+571
+2154
+833
 Yellow bees (en cours de butinage)
 NIL
 NIL
@@ -537,10 +537,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = yellow]"
 
 PLOT
-1984
-29
-2384
-307
+1751
+10
+2151
+288
 Pink bees (sur la piste de danse)
 NIL
 NIL
@@ -555,10 +555,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = pink]"
 
 PLOT
-1578
-312
-1986
-589
+1345
+293
+1753
+570
 Blue bees (en recherche de danse)
 NIL
 NIL
@@ -573,10 +573,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = blue]"
 
 PLOT
-1989
-313
-2386
-589
+1756
+294
+2153
+570
 Gray bees (au repos)
 NIL
 NIL
@@ -591,10 +591,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot count turtles with [color = gray]"
 
 PLOT
-1578
-592
-1987
-854
+1345
+573
+1754
+835
 Green vs red bees (succès vs echec lors du butinage)
 NIL
 NIL
@@ -633,17 +633,17 @@ scout-radius
 scout-radius
 3
 40
-18.0
+3.0
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-1175
-29
-1578
-305
+942
+10
+1345
+286
 Pollen Total
 NIL
 NIL
@@ -658,10 +658,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot plot-total-pollen"
 
 PLOT
-1176
-311
-1575
-590
+943
+292
+1342
+571
 Total flower pollen
 NIL
 NIL
@@ -674,6 +674,24 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot get-flower-pollen"
+
+PLOT
+947
+575
+1343
+835
+Nombre total d'abeille
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot count turtles"
 
 @#$#@#$#@
 ## WHAT IS IT?
